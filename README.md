@@ -2,7 +2,7 @@
 
 This repository contains the code and data file for executing the data analysis.
 
-The data required for our analysis contains TRS data for Intimate Partner Violence surveillence in Kalamazoo county in the US and is stored as a txt file named 'Intimate Partner Violence Data.csv'. This must be read in the beginning of the data analysis code.
+The data required for our analysis contains TRS data for Intimate Partner Violence surveillence in Kalamazoo county in the US and is stored as a txt file named 'Intimate Partner Violence Data.txt'. This must be read in the beginning of the data analysis code.
 
 The data analysis codes are as follows:
 
