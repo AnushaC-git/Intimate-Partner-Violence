@@ -1,0 +1,394 @@
+## Program for the real data analysis on Intimate Partner Violence #####
+
+rm(list=ls())
+library(invgamma)
+library(MCMCpack)
+library(AR)
+library(MASS)
+library(gamlss.dist)
+library(ramify)
+library(glogis)
+library(HDInterval)
+library(coda)
+
+
+############# Data #######################
+
+
+
+#Intimate partner violence surveillance
+
+x_111=7
+x_110=4
+x_101=18
+x_011=44
+x_100=155
+x_010=81
+x_001=211
+
+NN=x_111+x_110+x_101+x_011+x_100+x_010+x_001     # Sum of seven observed cell
+
+x=array(0,3)
+
+x[1]=x_111+x_110+x_101+x_100
+x[2]=x_111+x_110+x_001+x_010
+x[3]=x_111+x_101+x_011+x_001
+
+
+tot=500000    # No. of iteration in Gibbs Sampling
+
+a1=1
+b1=1
+a2=1
+b2=1
+a3=1
+b3=1
+
+
+
+######## Initial Value ##############################
+
+
+alpha1=0.2
+alpha2=0.2
+alpha3=0.2 
+
+a_phi=1 # Hyper parameter for phi
+b_phi=1
+
+TP=19695 # Female population size (15-49 years) of the Midwestern U.S. county
+
+
+p=array(NA,c(3,tot))
+p[1,1]=0.5
+p[2,1]=0.4
+p[3,1]=0.3
+
+p_111=array(NA,tot)
+p_110=array(NA,tot)
+p_101=array(NA,tot)
+p_011=array(NA,tot)
+p_010=array(NA,tot)
+p_001=array(NA,tot)
+p_000=array(NA,tot)
+p_100=array(NA,tot)
+
+beta=c(1,1,1,1) # Dirichlet prior
+
+
+
+alpha_1=array(NA,tot)
+alpha_2=array(NA,tot)
+alpha_3=array(NA,tot)
+alpha=array(NA,tot)
+
+y111=array(NA,tot)
+
+y110_1=array(NA,tot)
+y110_2=array(NA,tot)
+y110_3=array(NA,tot)
+
+y011_1=array(NA,tot)
+y011_2=array(NA,tot)
+y011_3=array(NA,tot)
+
+y100_1=array(NA,tot)
+y100_2=array(NA,tot)
+y100_3=array(NA,tot)
+
+y101_1=array(NA,tot)
+y101_2=array(NA,tot)
+y101_3=array(NA,tot)
+
+y010_1=array(NA,tot)
+y010_2=array(NA,tot)
+y010_3=array(NA,tot)
+
+y001_1=array(NA,tot)
+y001_2=array(NA,tot)
+y001_3=array(NA,tot)
+
+y000=array(NA,tot)
+
+
+N_estimate=array(NA,tot)
+
+phi=array(NA,tot)
+
+######################################
+
+
+alpha_1[1]=alpha1
+alpha_2[1]=alpha2
+alpha_3[1]=alpha3  
+
+alpha[1]=min((alpha_1[1]+alpha_2[1]+alpha_3[1]),1)
+
+N_estimate[1]=rnbinom(1,NN,p[1,1])+NN
+
+# For loop starts for Gibbs sampling
+
+
+
+for(h in 2:tot){
+  p_111[h-1]=((1-alpha[h-1])*p[1,h-1]*p[2,h-1]*p[3,h-1])
+  
+  p_110[h-1]=((1-alpha[h-1])*p[1,h-1]*p[2,h-1]*(1-p[3,h-1]))+(alpha_2[h-1]*p[1,h-1]*p[2,h-1])+(alpha_3[h-1]*p[1,h-1]*p[2,h-1])
+  Q_110_1=((1-alpha[h-1])*p[1,h-1]*p[2,h-1]*(1-p[3,h-1]))/p_110[h-1]
+  Q_110_2=alpha_2[h-1]*p[1,h-1]*p[2,h-1]/p_110[h-1]
+  Q_110_3=max(1-Q_110_1-Q_110_2,0)
+  prob_y110=c(Q_110_1,Q_110_2,Q_110_3)
+  y110_vec_draw=rmultinom(1,x_110,prob_y110)
+  
+  y110_1[h]=y110_vec_draw[1,1]
+  y110_2[h]=y110_vec_draw[2,1]           
+  y110_3[h]=x_110-y110_1[h]-y110_2[h]
+  
+  
+  p_011[h-1]=((1-alpha[h-1])*(1-p[1,h-1])*p[2,h-1]*p[3,h-1])+(alpha_1[h-1]*(1-p[1,h-1])*p[3,h-1])+(alpha_3[h-1]*(1-p[1,h-1])*p[2,h-1])
+  Q_011_1=((1-alpha[h-1])*(1-p[1,h-1])*p[2,h-1]*p[3,h-1])/p_011[h-1]
+  Q_011_2=(alpha_1[h-1]*(1-p[1,h-1])*p[3,h-1])/p_011[h-1]
+  Q_011_3=max(1-Q_011_1-Q_011_2,0)
+  prob_y011=c(Q_011_1,Q_011_2,Q_011_3)
+  y011_vec_draw=rmultinom(1,x_011,prob_y011)
+  
+  y011_1[h]=y011_vec_draw[1,1]
+  y011_2[h]=y011_vec_draw[2,1]
+  y011_3[h]=x_011-y011_1[h]-y011_2[h]
+  
+  
+  p_100[h-1]=((1-alpha[h-1])*p[1,h-1]*(1-p[2,h-1])*(1-p[3,h-1]))+(alpha_1[h-1]*p[1,h-1]*(1-p[3,h-1]))+(alpha_3[h-1]*p[1,h-1]*(1-p[2,h-1]))
+  Q_100_1=((1-alpha[h-1])*p[1,h-1]*(1-p[2,h-1])*(1-p[3,h-1]))/p_100[h-1]
+  Q_100_2=(alpha_1[h-1]*p[1,h-1]*(1-p[3,h-1]))/p_100[h-1]
+  Q_100_3=max(1-Q_100_1-Q_100_2,0)
+  prob_y100=c(Q_100_1,Q_100_2,Q_100_3)
+  y100_vec_draw=rmultinom(1,x_100,prob_y100)
+  
+  y100_1[h]=y100_vec_draw[1,1]
+  y100_2[h]=y100_vec_draw[2,1]
+  y100_3[h]=x_100-y100_1[h]-y100_2[h]
+  
+  p_101[h-1]=((1-alpha[h-1])*p[1,h-1]*(1-p[2,h-1])*p[3,h-1])+(alpha_1[h-1]*p[1,h-1]*p[3,h-1])+(alpha_2[h-1]*p[1,h-1]*(1-p[2,h-1]))
+  Q_101_1=(1-alpha[h-1])*p[1,h-1]*(1-p[2,h-1])*p[3,h-1]/p_101[h-1]
+  Q_101_2=(alpha_1[h-1]*p[1,h-1]*p[3,h-1])/p_101[h-1]
+  Q_101_3=max(1-Q_101_1-Q_101_2,0)
+  prob_y101=c(Q_101_1,Q_101_2,Q_101_3)
+  y101_vec_draw=rmultinom(1,x_101,prob_y101)
+  
+  y101_1[h]=y101_vec_draw[1,1]
+  y101_2[h]=y101_vec_draw[2,1]
+  y101_3[h]=x_101-y101_1[h]-y101_2[h]
+  
+  p_010[h-1]=((1-alpha[h-1])*(1-p[1,h-1])*p[2,h-1]*(1-p[3,h-1]))+(alpha_1[h-1]*(1-p[1,h-1])*(1-p[3,h-1]))+(alpha_2[h-1]*(1-p[1,h-1])*p[2,h-1])
+  
+  Q_010_1=((1-alpha[h-1])*(1-p[1,h-1])*p[2,h-1]*(1-p[3,h-1]))/p_010[h-1]
+  Q_010_2=(alpha_1[h-1]*(1-p[1,h-1])*(1-p[3,h-1]))/p_010[h-1]
+  Q_010_3=max(1-Q_010_1-Q_010_2,0)
+  prob_y010=c(Q_010_1,Q_010_2,Q_010_3)
+  y010_vec_draw=rmultinom(1,x_010,prob_y010)
+  
+  y010_1[h]=y010_vec_draw[1,1]
+  y010_2[h]=y010_vec_draw[2,1]
+  y010_3[h]=x_010-y010_1[h]-y010_2[h]
+  
+  
+  p_001[h-1]=((1-alpha[h-1])*(1-p[1,h-1])*(1-p[2,h-1])*p[3,h-1])+(alpha_2[h-1]*(1-p[1,h-1])*(1-p[2,h-1]))+(alpha_3[h-1]*(1-p[1,h-1])*(1-p[2,h-1]))
+  Q_001_1=((1-alpha[h-1])*(1-p[1,h-1])*(1-p[2,h-1])*p[3,h-1])/p_001[h-1]
+  Q_001_2=(alpha_2[h-1]*(1-p[1,h-1])*(1-p[2,h-1]))/p_001[h-1]
+  Q_001_3=max(1-Q_001_1-Q_001_2,0)
+  prob_y001=c(Q_001_1,Q_001_2,Q_001_3)
+  y001_vec_draw=rmultinom(1,x_001,prob_y001)
+  
+  y001_1[h]=y001_vec_draw[1,1]
+  y001_2[h]=y001_vec_draw[2,1]
+  y001_3[h]=x_001-y001_1[h]-y001_2[h]
+  
+  
+  
+  d1=y011_2[h]+y100_2[h]+y101_2[h]+y010_2[h]+beta[1]
+  d2=y110_2[h]+x_101-y101_1[h]-y101_2[h]+x_010-y010_1[h]-y010_2[h]+y001_2[h]+beta[2]
+  d3=x_110-y110_1[h]-y110_2[h]+x_011-y011_1[h]-y011_2[h]+x_100-y100_1[h]-y100_2[h]+x_001-y001_1[h]-y001_2[h]+beta[3]
+  d4=x_111+(N_estimate[h-1]-NN)+(y110_1[h]+y011_1[h]+y100_1[h]+y101_1[h]+y010_1[h]+y001_1[h])+beta[4]
+  
+  alpha_vec_draw=rdirichlet(1,c(d1,d2,d3,d4))
+  
+  alpha_1[h]=alpha_vec_draw[1,1]
+  alpha_2[h]=alpha_vec_draw[1,2]
+  alpha_3[h]=alpha_vec_draw[1,3]  
+  alpha[h]=min((alpha_1[h]+alpha_2[h]+alpha_3[h]),1)
+  
+  
+  m1=x[1]
+  n1=(N_estimate[h-1]-x[1])
+  
+  m2=x_111+x_110+x_011-y011_2[h]+x_010-y010_2[h]
+  n2=x_100-y100_2[h]+x_101-y101_2[h]+x_001+N_estimate[h-1]-NN
+  
+  m3=x_111+y011_1[h]+y011_2[h]+y101_1[h]+y101_2[h]+y001_1[h]
+  n3=y110_1[h]+y100_1[h]+y100_2[h]+y010_1[h]+y010_2[h]+N_estimate[h-1]-NN
+  
+  a_p1=x_111+x_110+x_100+x_101+a1
+  b_p1=x_011+x_010+x_001+N_estimate[h-1]-NN+b1
+  
+  a_p2=x_111+x_110+x_011-y011_2[h]+x_010-y010_2[h]+a2
+  b_p2=x_100-y100_2[h]+x_101-y101_2[h]+x_001+N_estimate[h-1]-NN+b2
+  
+  a_p3=x_111+y011_1[h]+y011_2[h]+y101_1[h]+y101_2[h]+y001_1[h]+a3
+  b_p3=y110_1[h]+y100_1[h]+y100_2[h]+y010_1[h]+y010_2[h]+N_estimate[h-1]-NN+b3
+  
+  p[1,h]=rbeta(1,a_p1,b_p1)
+  p[2,h]=rbeta(1,a_p2,b_p2)
+  p[3,h]=rbeta(1,a_p3,b_p3)
+  
+  
+  
+  phi[h]=rbeta(1,N_estimate[h-1]+a_phi,TP+b_phi-N_estimate[h-1])  
+  p_000[h]=(1-alpha[h])*(1-p[1,h])*(1-p[2,h])*(1-p[3,h])
+  w=rbinom(1,TP-NN,((phi[h]*p_000[h])/(1-phi[h]+(phi[h]*p_000[h]))))
+  N_estimate[h]=w+NN
+  
+  
+} # End of the h loop
+
+
+
+p_111[h]=((1-alpha[h])*p[1,h]*p[2,h]*p[3,h])
+p_110[h]=((1-alpha[h])*p[1,h]*p[2,h]*(1-p[3,h]))+(alpha_2[h]*p[1,h]*p[2,h])+(alpha_3[h]*p[1,h]*p[2,h])
+p_011[h]=((1-alpha[h])*(1-p[1,h])*p[2,h]*p[3,h])+(alpha_1[h]*(1-p[1,h])*p[3,h])+(alpha_3[h]*(1-p[1,h])*p[2,h])
+p_100[h]=((1-alpha[h])*p[1,h]*(1-p[2,h])*(1-p[3,h]))+(alpha_1[h]*p[1,h]*(1-p[3,h]))+(alpha_3[h]*p[1,h]*(1-p[2,h]))
+p_101[h]=((1-alpha[h])*p[1,h]*(1-p[2,h])*p[3,h])+(alpha_1[h]*p[1,h]*p[3,h])+(alpha_2[h]*p[1,h]*(1-p[2,h]))
+p_010[h]=((1-alpha[h])*(1-p[1,h])*p[2,h]*(1-p[3,h]))+(alpha_1[h]*(1-p[1,h])*(1-p[3,h]))+(alpha_2[h]*(1-p[1,h])*p[2,h])
+p_001[h]=((1-alpha[h])*(1-p[1,h])*(1-p[2,h])*p[3,h])+(alpha_2[h]*(1-p[1,h])*(1-p[2,h]))+(alpha_3[h]*(1-p[1,h])*(1-p[2,h]))
+
+
+
+
+
+
+
+############################################################################################
+
+
+
+
+
+
+###################  Plots & Diagnostics #######################
+
+th=10
+lw=tot*0.1
+up=tot
+
+
+########### Geweke's Diagnostics #######################
+
+Theta=mcmc.list(as.mcmc(cbind(N_estimate[seq(lw,up, th)],alpha_1[seq(lw,up, th)],alpha_2[seq(lw,up, th)],alpha_3[seq(lw,up, th)])))
+
+geweke.diag(Theta, frac1=0.1, frac2=0.5)
+
+
+
+
+############### Autocorrelation plots ###########################
+
+Theta=cbind(N_estimate[seq(lw,up, th)],alpha_1[seq(lw,up, th)],alpha_2[seq(lw,up, th)],alpha_3[seq(lw,up, th)])
+
+
+acf(Theta[,1], lag.max = 20, plot=TRUE)
+
+pacf(Theta[,1], lag.max = 20, plot=TRUE)
+
+
+
+
+#########  Trace plots  ##############
+
+dev.new()
+par(mfrow = c(2, 4), oma = c(3, 1, 1, 1))
+plot(N_estimate[seq(lw,up, th)],xlab="",ylab="Population Size",type="l", cex.lab = 1.5, xaxt = 'n', yaxt = 'n', mgp = c(1.5, 0.5, 0))
+plot(alpha_1[seq(lw,up, th)],xlab="",ylab=bquote(bold(beta[1])),type="l", cex.lab = 2, font.lab = 2, xaxt = 'n', yaxt = 'n', mgp = c(1.5, 0.5, 0))
+plot(alpha_2[seq(lw,up,th)],xlab="",ylab=bquote(bold(beta[2])),type="l", cex.lab = 2, font.lab = 2, xaxt = 'n', yaxt = 'n', mgp = c(1.5, 0.5, 0))
+plot(alpha_3[seq(lw,up, th)],xlab="",ylab=bquote(bold(beta[3])),type="l", cex.lab = 2, font.lab = 2, xaxt = 'n', yaxt = 'n', mgp = c(1.5, 0.5, 0))
+plot(1-alpha[seq(lw,up, th)],xlab="",ylab=bquote(bold(1-beta[0])),type="l", cex.lab = 2, font.lab = 2, xaxt = 'n', yaxt = 'n', mgp = c(1.5, 0.5, 0))
+plot(p[1,seq(lw,up, th)],xlab="",ylab=expression(p[1]),type="l", cex.lab = 2, font.lab = 2, xaxt = 'n', yaxt = 'n', mgp = c(1.5, 0.5, 0))
+plot(p[2,seq(lw,up, th)],xlab="",ylab=expression(p[2]),type="l", cex.lab = 2, font.lab = 2, xaxt = 'n', yaxt = 'n', mgp = c(1.5, 0.5, 0))
+plot(p[3,seq(lw,up, th)],xlab="",ylab=expression(p[3]),type="l", cex.lab = 2, font.lab = 2, xaxt = 'n', yaxt = 'n', mgp = c(1.5, 0.5, 0))
+mtext("Iteration", side = 1, line = 0.5, outer = TRUE, cex = 1.5, font = 1)
+
+
+
+
+##################### Estimates ###############################
+
+
+
+
+
+M=N_estimate[seq(lw,up, th)]   # Posterior sample
+Medi=median(M)                  # Posterior median, estimate of N
+MD_Medi=sum(abs(M-Medi))/length(M)
+
+Interval_hpd=hdi(M, credMass=0.95) #  95% highest posterior credible interval
+Interval_quant=quantile(M,  probs = c(2.5,97.5)/100)  #  95% CI based on quantiles of posterior density
+
+CI_hpd_N_1=Interval_hpd[1]  # Lower limit of hpd
+CI_hpd_N_2=Interval_hpd[2]  # Upper limit of hpd
+CI_hpd_N_length=Interval_hpd[2]-Interval_hpd[1]   # Length of hpd CI
+
+
+alpha_1_estimate=median(alpha_1[seq(lw,up, th)])
+alpha_2_estimate=median(alpha_2[seq(lw,up, th)])
+alpha_3_estimate=median(alpha_3[seq(lw,up, th)])
+alpha_estimate=alpha_1_estimate+alpha_2_estimate+alpha_3_estimate
+
+
+p_1_estimate=median(p[1,seq(lw,up, th)])
+p_2_estimate=median(p[2,seq(lw,up, th)])
+p_3_estimate=median(p[3,seq(lw,up, th)])
+
+
+p_1..=p_111[seq(lw,up, th)]+p_110[seq(lw,up, th)]+p_101[seq(lw,up, th)]+p_100[seq(lw,up, th)]
+p_.1.=p_111[seq(lw,up, th)]+p_110[seq(lw,up, th)]+p_011[seq(lw,up, th)]+p_010[seq(lw,up, th)]
+p_..1=p_111[seq(lw,up, th)]+p_101[seq(lw,up, th)]+p_011[seq(lw,up, th)]+p_001[seq(lw,up, th)]
+
+est_p_1..=median(p_1..)
+est_p_.1.=median(p_.1.)
+est_p_..1=median(p_..1)
+
+######################################################################################
+
+
+
+###### Results ###################
+
+N_hat_TBMH=Medi                               # Median Estimate of the population size 
+MD_Median=MD_Medi                                       # Mean deviation about median
+
+hpd_lower_TBMH=CI_hpd_N_1   # Lower limit of the 95% confidence interval based on hpd
+hpd_upper_TBMH=CI_hpd_N_2   # Upper limit of the 95% confidence interval based on hpd
+
+
+
+
+Medi                  # posterior median, estimate of N
+MD_Medi                
+
+CI_hpd_N_1  # Lower limit of hpd
+CI_hpd_N_2 # Upper limit of hpd
+CI_hpd_N_length # Length of hpd CI
+
+alpha_1_estimate
+alpha_2_estimate
+alpha_3_estimate
+
+alpha_estimate
+
+p_1_estimate
+p_2_estimate
+p_3_estimate
+
+est_p_1..
+est_p_.1.
+est_p_..1
+
+
