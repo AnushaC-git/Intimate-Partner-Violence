@@ -311,7 +311,7 @@ mtext("Iteration", side = 1, line = 0.5, outer = TRUE, cex = 1.5, font = 1)
 
 
 M=N_estimate[seq(lw,up, th)]   # Posterior sample
-Medi=median(M)                  # Posterior estimate of N
+Medi=median(M)                  # Posterior median, estimate of N
 MD_Medi=sum(abs(M-Medi))/length(M)
 
 Interval_hpd=hdi(M, credMass=0.95) #  95% highest posterior credible interval
