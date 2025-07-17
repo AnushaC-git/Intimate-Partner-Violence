@@ -12,7 +12,7 @@ library(HDInterval)
 library(coda)
 
 
-############# Data #######################
+############# TRS Data #######################
 
 #Intimate partner violence surveillance
 
@@ -35,12 +35,7 @@ x[3]=x_111+x_101+x_011+x_001
 
 tot=500000    # No. of iteration in Gibbs Sampling
 
-a1=1
-b1=1
-a2=1
-b2=1
-a3=1
-b3=1
+
 
 
 ######## Initial Value ##############################
@@ -49,6 +44,13 @@ b3=1
 alpha1=0.2
 alpha2=0.2
 alpha3=0.2 
+
+a1=1
+b1=1
+a2=1
+b2=1
+a3=1
+b3=1
 
 p=array(NA,c(3,tot))
 p[1,1]=0.5
@@ -355,7 +357,7 @@ hpd_upper_TBMH=CI_hpd_N_2   # Upper limit of the 95% confidence interval based o
 
 
 
-Medi                  # Posterior median, estimate of N
+Medi                  # Posterior estimate of N
 MD_Medi                
 
 CI_hpd_N_1  # Lower limit of hpd
