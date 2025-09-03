@@ -1,15 +1,8 @@
 ## Program for the real data analysis on Intimate Partner Violence #####
 
 rm(list=ls())
-library(invgamma)
 library(MCMCpack)
-library(AR)
-library(MASS)
-library(gamlss.dist)
-library(ramify)
-library(glogis)
 library(HDInterval)
-library(coda)
 
 
 ############# TRS Data #######################
@@ -391,5 +384,6 @@ p_3_estimate
 est_p_1..
 est_p_.1.
 est_p_..1
+
 
 
